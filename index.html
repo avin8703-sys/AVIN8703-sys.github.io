@@ -1,92 +1,143 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>길드 아레나 확률 계산기 TEST</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f1f8;
-      color: #2f2438;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .card {
-      width: min(90%, 420px);
-      background: white;
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-      text-align: center;
-    }
-
-    h1 {
-      margin-top: 0;
-      font-size: 26px;
-      color: #6b3f8f;
-    }
-
-    p {
-      line-height: 1.6;
-      color: #5b5161;
-    }
-
-    button {
-      margin-top: 18px;
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 12px;
-      background: #6b3f8f;
-      color: white;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    #result {
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 12px;
-      background: #fff2bd;
-      font-weight: bold;
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>길드 아레나 확률 계산기</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#17121e;color:#fff}
+.wrap{max-width:620px;margin:auto;padding:18px}
+.hero,.card{background:#241b2f;border-radius:18px;padding:16px;margin-bottom:14px}
+.hero{background:linear-gradient(135deg,#6e44aa,#9a5ee8)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+button{padding:12px;border:0;border-radius:12px;background:#3a2b49;color:#fff;font-weight:bold}
+button.active{background:#8d5bd0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mission{background:#30243d;border:1px solid #4c3a5c;border-radius:12px;padding:10px;cursor:pointer}
+.mission.selected{outline:2px solid #ffd66b}
+.name{font-weight:bold}
+.prob{font-size:12px;color:#c8bad4;margin-top:4px}
+.result{background:#33263f;border-radius:14px;padding:14px;text-align:center}
+.best{font-size:22px;font-weight:bold;color:#ffd66b;margin:8px 0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#211928;border-radius:10px;padding:10px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th,td{padding:8px;border-bottom:1px solid #4a3858}
+.num{text-align:right}
+.notice{font-size:12px;color:#c0b2ca;line-height:1.5}
+@media(max-width:390px){.grid{grid-template-columns:1fr}}
+</style>
 </head>
-
 <body>
-  <div class="card">
-    <h1>🎯 길드 아레나 확률 계산기</h1>
+<div class="wrap">
+<div class="hero"><h1>🎯 길드 아레나 확률 계산기</h1><p>원하는 미션을 선택하면 가장 유리한 고정 미션을 계산합니다.</p></div>
 
-    <p>
-      GitHub Pages 연결 테스트용 화면입니다.<br>
-      아래 버튼을 눌러보세요.
-    </p>
+<div class="card">
+<h3>1. 요일 선택</h3>
+<div class="tabs">
+<button data-day="월화">월·화</button>
+<button data-day="수목">수·목</button>
+<button class="active" data-day="금토일">금·토·일</button>
+</div>
+<p class="notice">파란색 미션은 새로고침 후보에서 제외하는 것으로 계산합니다.</p>
+</div>
 
-    <button onclick="testCalculator()">
-      테스트 실행
-    </button>
+<div class="card">
+<h3>2. 원하는 미션 선택</h3>
+<div id="missions" class="grid"></div>
+<br><button onclick="resetGoals()">선택 초기화</button>
+</div>
 
-    <div id="result">
-      ✅ 정상 작동합니다!<br>
-      이제 진짜 확률 계산기를 만들 수 있어요.
-    </div>
-  </div>
+<div class="card">
+<h3>3. 추천 결과</h3>
+<div class="result">
+<div>추천 고정 미션</div>
+<div id="best" class="best">목표 미션을 선택하세요</div>
+<div class="stats">
+<div class="stat">1회 성공확률<br><b id="success">-</b></div>
+<div class="stat">평균 필요 횟수<br><b id="average">-</b></div>
+</div>
+</div>
+</div>
 
-  <script>
-    function testCalculator() {
-      document.getElementById("result").style.display = "block";
-    }
-  </script>
+<div class="card">
+<h3>추천 고정 미션 TOP 10</h3>
+<table>
+<thead><tr><th>순위</th><th>고정 미션</th><th class="num">기본확률</th><th class="num">성공확률</th></tr></thead>
+<tbody id="ranking"></tbody>
+</table>
+</div>
+
+<p class="notice">게임 화면에 표시된 반올림 확률을 기준으로 계산합니다.</p>
+</div>
+
+<script>
+const DATA={
+"월화":[
+["노랑-펫사료",4.06],["보라-펫사료",8.13],["노랑-병력생산",1.62],["노랑-영웅조각",1.62],
+["노랑-다이아 사용",1.62],["노랑-연구가속",0.81],["노랑-건물가속",0.81],["노랑-연구점수",1.62],
+["노랑-건물점수",1.62],["노랑-다이아과금",4.06],["보라-병력생산",2.43],["보라-멧돼지",4.06],
+["보라-필드몹",4.06],["보라-주점모집",4.06],["보라-다이아 사용",2.43],["보라-연구가속",2.43],
+["보라-건물가속",2.43],["보라-연구점수",2.43],["보라-건물점수",2.43],["보라-다이아과금",8.13]
+],
+"수목":[
+["노랑-비보조각",6.32],["노랑-비헤모스 강화석",3.16],["노랑-비보건물 업글",6.32],["보라-비헤모스 강화석",6.32],
+["보라-비보건물 업글",9.49],["노랑-병력생산",1.26],["노랑-영웅조각",1.26],["노랑-다이아 사용",1.26],
+["노랑-연구가속",0.63],["노랑-건물가속",0.63],["노랑-연구점수",1.26],["노랑-건물점수",1.26],
+["노랑-다이아과금",3.16],["보라-병력생산",1.89],["보라-멧돼지",3.16],["보라-필드몹",3.16],
+["보라-주점모집",3.16],["보라-다이아 사용",1.89],["보라-연구가속",1.89],["보라-건물가속",1.89],
+["보라-연구점수",1.89],["보라-건물점수",1.89],["보라-다이아과금",6.32]
+],
+"금토일":[
+["보라-건물가속",1.89],["보라-연구점수",1.89],["보라-건물점수",1.89],["보라-다이아과금",6.32],
+["노랑-연구점수",1.26],["노랑-건물점수",1.26],["노랑-다이아과금",3.16],["보라-병력생산",1.89],
+["보라-멧돼지",3.16],["보라-필드몹",3.16],["보라-주점모집",3.16],["보라-다이아 사용",1.89],
+["보라-연구가속",1.89],["노랑-메달",6.32],["노랑-해골",6.32],["보라-메달",9.49],
+["보라-해골",9.49],["노랑-병력생산",1.26],["노랑-영웅조각",1.26],["노랑-다이아 사용",1.26],
+["노랑-연구가속",0.63],["노랑-건물가속",0.63]
+]};
+
+let currentDay="금토일";
+let selected=new Set(["노랑-메달","노랑-해골"]);
+
+function renderMissions(){
+ const box=document.getElementById("missions"); box.innerHTML="";
+ DATA[currentDay].forEach(([name,p])=>{
+  const d=document.createElement("div");
+  d.className="mission"+(selected.has(name)?" selected":"");
+  d.innerHTML=`<div class="name">${selected.has(name)?"✓ ":""}${name}</div><div class="prob">기본 확률 ${p.toFixed(2)}%</div>`;
+  d.onclick=()=>{selected.has(name)?selected.delete(name):selected.add(name);renderMissions();calculate();};
+  box.appendChild(d);
+ });
+}
+function calculate(){
+ const rows=DATA[currentDay];
+ const goalSum=rows.filter(r=>selected.has(r[0])).reduce((s,r)=>s+r[1],0);
+ const total=rows.reduce((s,r)=>s+r[1],0);
+ if(goalSum===0){
+  best.textContent="목표 미션을 선택하세요"; success.textContent="-"; average.textContent="-"; ranking.innerHTML=""; return;
+ }
+ const cands=rows.filter(r=>!selected.has(r[0])).map(r=>({name:r[0],base:r[1],success:goalSum/(total-r[1])}))
+ .sort((a,b)=>b.success-a.success||b.base-a.base);
+ const b=cands[0];
+ best.textContent=b.name;
+ success.textContent=(b.success*100).toFixed(2)+"%";
+ average.textContent=(1/b.success).toFixed(1)+"회";
+ ranking.innerHTML=cands.slice(0,10).map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td class="num">${c.base.toFixed(2)}%</td><td class="num">${(c.success*100).toFixed(2)}%</td></tr>`).join("");
+}
+function resetGoals(){selected.clear();renderMissions();calculate();}
+document.querySelectorAll("[data-day]").forEach(btn=>{
+ btn.onclick=()=>{
+  currentDay=btn.dataset.day;
+  document.querySelectorAll("[data-day]").forEach(b=>b.classList.toggle("active",b===btn));
+  selected.clear();
+  if(currentDay==="금토일"){selected.add("노랑-메달");selected.add("노랑-해골");}
+  if(currentDay==="월화"){selected.add("노랑-펫사료");}
+  if(currentDay==="수목"){selected.add("노랑-비보조각");selected.add("노랑-비보건물 업글");}
+  renderMissions();calculate();
+ };
+});
+renderMissions();calculate();
+</script>
 </body>
 </html>
