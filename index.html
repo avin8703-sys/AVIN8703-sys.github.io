@@ -10,7 +10,7 @@ body{margin:0;font-family:Arial,sans-serif;background:#17121e;color:#fff}
 .hero,.card{background:#241b2f;border-radius:18px;padding:16px;margin-bottom:14px}
 .hero{background:linear-gradient(135deg,#6e44aa,#9a5ee8)}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-button{padding:12px;border:0;border-radius:12px;background:#3a2b49;color:#fff;font-weight:bold}
+button{padding:12px;border:0;border-radius:12px;background:#3a2b49;color:#fff;font-weight:bold;cursor:pointer}
 button.active{background:#8d5bd0}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mission{background:#30243d;border:1px solid #4c3a5c;border-radius:12px;padding:10px;cursor:pointer}
@@ -30,7 +30,10 @@ th,td{padding:8px;border-bottom:1px solid #4a3858}
 </head>
 <body>
 <div class="wrap">
-<div class="hero"><h1>🎯 길드 아레나 확률 계산기</h1><p>원하는 미션을 선택하면 가장 유리한 고정 미션을 계산합니다.</p></div>
+<div class="hero">
+  <h1>🎯 길드 아레나 확률 계산기</h1>
+  <p>원하는 미션을 선택하면 가장 유리한 고정 미션을 계산합니다.</p>
+</div>
 
 <div class="card">
 <h3>1. 요일 선택</h3>
@@ -45,7 +48,8 @@ th,td{padding:8px;border-bottom:1px solid #4a3858}
 <div class="card">
 <h3>2. 원하는 미션 선택</h3>
 <div id="missions" class="grid"></div>
-<br><button onclick="resetGoals()">선택 초기화</button>
+<br>
+<button id="resetBtn">선택 초기화</button>
 </div>
 
 <div class="card">
@@ -63,7 +67,9 @@ th,td{padding:8px;border-bottom:1px solid #4a3858}
 <div class="card">
 <h3>추천 고정 미션 TOP 10</h3>
 <table>
-<thead><tr><th>순위</th><th>고정 미션</th><th class="num">기본확률</th><th class="num">성공확률</th></tr></thead>
+<thead>
+<tr><th>순위</th><th>고정 미션</th><th class="num">기본확률</th><th class="num">성공확률</th></tr>
+</thead>
 <tbody id="ranking"></tbody>
 </table>
 </div>
@@ -72,7 +78,7 @@ th,td{padding:8px;border-bottom:1px solid #4a3858}
 </div>
 
 <script>
-const DATA={
+const DATA = {
 "월화":[
 ["노랑-펫사료",4.06],["보라-펫사료",8.13],["노랑-병력생산",1.62],["노랑-영웅조각",1.62],
 ["노랑-다이아 사용",1.62],["노랑-연구가속",0.81],["노랑-건물가속",0.81],["노랑-연구점수",1.62],
@@ -81,12 +87,13 @@ const DATA={
 ["보라-건물가속",2.43],["보라-연구점수",2.43],["보라-건물점수",2.43],["보라-다이아과금",8.13]
 ],
 "수목":[
-["노랑-비보조각",6.32],["노랑-비헤모스 강화석",3.16],["노랑-비보건물 업글",6.32],["보라-비헤모스 강화석",6.32],
-["보라-비보건물 업글",9.49],["노랑-병력생산",1.26],["노랑-영웅조각",1.26],["노랑-다이아 사용",1.26],
-["노랑-연구가속",0.63],["노랑-건물가속",0.63],["노랑-연구점수",1.26],["노랑-건물점수",1.26],
+["노랑-비보조각",6.32],["노랑-비헤모스 강화석",3.16],["노랑-비보건물 업글",6.32],
+["보라-비헤모스 강화석",6.32],["보라-비보건물 업글",9.49],["노랑-병력생산",1.26],
+["노랑-영웅조각",1.26],["노랑-다이아 사용",1.26],["노랑-연구가속",0.63],
+["노랑-건물가속",0.63],["노랑-연구점수",1.26],["노랑-건물점수",1.26],
 ["노랑-다이아과금",3.16],["보라-병력생산",1.89],["보라-멧돼지",3.16],["보라-필드몹",3.16],
-["보라-주점모집",3.16],["보라-다이아 사용",1.89],["보라-연구가속",1.89],["보라-건물가속",1.89],
-["보라-연구점수",1.89],["보라-건물점수",1.89],["보라-다이아과금",6.32]
+["보라-주점모집",3.16],["보라-다이아 사용",1.89],["보라-연구가속",1.89],
+["보라-건물가속",1.89],["보라-연구점수",1.89],["보라-건물점수",1.89],["보라-다이아과금",6.32]
 ],
 "금토일":[
 ["보라-건물가속",1.89],["보라-연구점수",1.89],["보라-건물점수",1.89],["보라-다이아과금",6.32],
@@ -97,47 +104,115 @@ const DATA={
 ["노랑-연구가속",0.63],["노랑-건물가속",0.63]
 ]};
 
-let currentDay="금토일";
-let selected=new Set(["노랑-메달","노랑-해골"]);
+let currentDay = "금토일";
+let selected = new Set(["노랑-메달","노랑-해골"]);
+
+const missionsEl = document.getElementById("missions");
+const bestEl = document.getElementById("best");
+const successEl = document.getElementById("success");
+const averageEl = document.getElementById("average");
+const rankingEl = document.getElementById("ranking");
+const resetBtn = document.getElementById("resetBtn");
 
 function renderMissions(){
- const box=document.getElementById("missions"); box.innerHTML="";
- DATA[currentDay].forEach(([name,p])=>{
-  const d=document.createElement("div");
-  d.className="mission"+(selected.has(name)?" selected":"");
-  d.innerHTML=`<div class="name">${selected.has(name)?"✓ ":""}${name}</div><div class="prob">기본 확률 ${p.toFixed(2)}%</div>`;
-  d.onclick=()=>{selected.has(name)?selected.delete(name):selected.add(name);renderMissions();calculate();};
-  box.appendChild(d);
- });
+  missionsEl.innerHTML = "";
+  DATA[currentDay].forEach(([name,p]) => {
+    const d = document.createElement("div");
+    d.className = "mission" + (selected.has(name) ? " selected" : "");
+    d.innerHTML = `
+      <div class="name">${selected.has(name) ? "✓ " : ""}${name}</div>
+      <div class="prob">기본 확률 ${p.toFixed(2)}%</div>
+    `;
+    d.addEventListener("click", () => {
+      if(selected.has(name)) selected.delete(name);
+      else selected.add(name);
+      renderMissions();
+      calculate();
+    });
+    missionsEl.appendChild(d);
+  });
 }
+
 function calculate(){
- const rows=DATA[currentDay];
- const goalSum=rows.filter(r=>selected.has(r[0])).reduce((s,r)=>s+r[1],0);
- const total=rows.reduce((s,r)=>s+r[1],0);
- if(goalSum===0){
-  best.textContent="목표 미션을 선택하세요"; success.textContent="-"; average.textContent="-"; ranking.innerHTML=""; return;
- }
- const cands=rows.filter(r=>!selected.has(r[0])).map(r=>({name:r[0],base:r[1],success:goalSum/(total-r[1])}))
- .sort((a,b)=>b.success-a.success||b.base-a.base);
- const b=cands[0];
- best.textContent=b.name;
- success.textContent=(b.success*100).toFixed(2)+"%";
- average.textContent=(1/b.success).toFixed(1)+"회";
- ranking.innerHTML=cands.slice(0,10).map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td class="num">${c.base.toFixed(2)}%</td><td class="num">${(c.success*100).toFixed(2)}%</td></tr>`).join("");
+  const rows = DATA[currentDay];
+  const goals = rows.filter(r => selected.has(r[0]));
+  const goalSum = goals.reduce((s,r) => s + r[1], 0);
+  const total = rows.reduce((s,r) => s + r[1], 0);
+
+  if(goals.length === 0){
+    bestEl.textContent = "목표 미션을 선택하세요";
+    successEl.textContent = "-";
+    averageEl.textContent = "-";
+    rankingEl.innerHTML = "";
+    return;
+  }
+
+  const candidates = rows
+    .filter(r => !selected.has(r[0]))
+    .map(r => {
+      const denominator = total - r[1];
+      const success = goalSum / denominator;
+      return {name:r[0], base:r[1], success};
+    })
+    .sort((a,b) => b.success - a.success || b.base - a.base || a.name.localeCompare(b.name,"ko"));
+
+  const best = candidates[0];
+
+  if(!best){
+    bestEl.textContent = "고정 가능한 미션이 없습니다";
+    successEl.textContent = "-";
+    averageEl.textContent = "-";
+    rankingEl.innerHTML = "";
+    return;
+  }
+
+  bestEl.textContent = best.name;
+  successEl.textContent = (best.success * 100).toFixed(2) + "%";
+  averageEl.textContent = (1 / best.success).toFixed(1) + "회";
+
+  rankingEl.innerHTML = candidates.slice(0,10).map((c,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td>${c.name}</td>
+      <td class="num">${c.base.toFixed(2)}%</td>
+      <td class="num">${(c.success*100).toFixed(2)}%</td>
+    </tr>
+  `).join("");
 }
-function resetGoals(){selected.clear();renderMissions();calculate();}
-document.querySelectorAll("[data-day]").forEach(btn=>{
- btn.onclick=()=>{
-  currentDay=btn.dataset.day;
-  document.querySelectorAll("[data-day]").forEach(b=>b.classList.toggle("active",b===btn));
+
+function setDefaults(day){
   selected.clear();
-  if(currentDay==="금토일"){selected.add("노랑-메달");selected.add("노랑-해골");}
-  if(currentDay==="월화"){selected.add("노랑-펫사료");}
-  if(currentDay==="수목"){selected.add("노랑-비보조각");selected.add("노랑-비보건물 업글");}
-  renderMissions();calculate();
- };
+  if(day === "금토일"){
+    selected.add("노랑-메달");
+    selected.add("노랑-해골");
+  }else if(day === "월화"){
+    selected.add("노랑-펫사료");
+  }else if(day === "수목"){
+    selected.add("노랑-비보조각");
+    selected.add("노랑-비보건물 업글");
+  }
+}
+
+document.querySelectorAll("[data-day]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentDay = btn.dataset.day;
+    document.querySelectorAll("[data-day]").forEach(b => {
+      b.classList.toggle("active", b === btn);
+    });
+    setDefaults(currentDay);
+    renderMissions();
+    calculate();
+  });
 });
-renderMissions();calculate();
+
+resetBtn.addEventListener("click", () => {
+  selected.clear();
+  renderMissions();
+  calculate();
+});
+
+renderMissions();
+calculate();
 </script>
 </body>
 </html>
